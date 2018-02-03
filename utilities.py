@@ -12,3 +12,8 @@ def change_ace_to_one(lst):
 
 def most_common(lst):
     return max(set(lst), key=lst.count)
+
+def sample_distribution_from_dict(dic):
+    d_choices = list(dic.keys())
+    d_probs = list(dic.values())
+    return np.random.choice(d_choices, 1, p=d_probs)[0]
