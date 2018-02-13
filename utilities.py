@@ -1,5 +1,9 @@
+import numpy as np
+import os
+import sys
+
 def rotate(l):
-    return l[-1:] + l[:-1]
+    return l[1:] + l[:1]
 
 def all_equal(lst):
     return len(set(lst)) == 1
@@ -14,6 +18,17 @@ def most_common(lst):
     return max(set(lst), key=lst.count)
 
 def sample_distribution_from_dict(dic):
-    d_choices = list(dic.keys())
-    d_probs = list(dic.values())
-    return np.random.choice(d_choices, 1, p=d_probs)[0]
+    d_choices = list((dic.keys()))
+    d_probs = np.array(list(dic.values()))
+    return np.random.choice(d_choices, 1, p=d_probs/sum(d_probs))[0]
+
+def blockPrint():
+    old_stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
+    return old_stdout
+
+def enablePrint(old):
+    sys.stdout = old
+    
+def equal_bets(current_bets, remaining_players_hand):
+    return all_equal([current_bets[player] for player in remaining_players_hand])

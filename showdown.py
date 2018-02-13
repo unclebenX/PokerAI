@@ -46,4 +46,16 @@ def hand_score(cards):
     
 def best_hand(cards):
     best = max(itertools.combinations(cards, 5), key=hand_score)
-    return best, hand_score(best)
+    return hand_score(best)
+
+def hand_winners(cards, board):
+    board = convert_matrix_to_cards(board)
+    winners, max_scores = [], (-1,-1)
+    for player in cards.keys():
+        s = best_hand(convert_matrix_to_cards(cards[player]) + board)
+        if(s>max_scores):
+            winners = [player]
+            max_scores = s
+        elif(s==max_scores):
+            winners.append(player)
+    return winners
