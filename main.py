@@ -23,4 +23,4 @@ stats_history = s[0]
 plt.clf()
 for pl in players:
     plt.plot(stats_history[pl], label=pl.display())
-plt.show()
+plt.legend()
