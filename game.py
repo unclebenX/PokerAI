@@ -3,10 +3,7 @@ import numpy as np
 from deck import Deck
 import enum
 import showdown as sd
-<<<<<<< HEAD
-=======
 import gamestats as gs
->>>>>>> b1bdd42fbfe35888f4e4e5d439aa1c8acfd0c6b3
 
 class Action(enum.Enum):
     FOLD = 1
@@ -29,7 +26,7 @@ class Game:
         self.remaining_players      = list(players) #joueurs restant dans l'epoch courante (liste ordonnée par ordre de jeu à la prochaine hand)
         self.remaining_players_hand = list(players) #joueurs restant dans la hand courante
         self.N                      = N
-        self.game_stats = {player: gs.GameStats(player.name) for player in self.players}
+        self.game_stats = {player: gs.GameStats(player.name, big_blind) for player in self.players}
         return
 
     def reset_game(self):
@@ -71,7 +68,7 @@ class Game:
             self.stacks[player] -= 1
             self.game_stats[player].reward = self.stacks[player]
             self.game_stats[player].win_rate = 0 if self.game_stats[player].hands_played == 0 else self.game_stats[player].reward*100/(self.big_blind*self.game_stats[player].hands_played)
-            self.game_stats[player].mean_win = 0 if self.game_stats[player].hands_won == 0 else self.game_stats[player].mean_win/(self.game_stats[player].hands_won*self.big_blind)
+            #self.game_stats[player].mean_win = 0 if self.game_stats[player].hands_won == 0 else self.game_stats[player].mean_win/(self.game_stats[player].hands_won*self.big_blind)
             self.game_stats[player].normalize()
         return self.stacks
 
@@ -151,7 +148,6 @@ class Game:
         self.pot += sum(self.current_bets.values())
         if(len(self.remaining_players_hand) < 2):
             self.game_stats[self.remaining_players_hand[0]].hands_won += 1
-            self.game_stats[self.remaining_players_hand[0]].mean_win += self.pot
             self.stacks[self.remaining_players_hand[0]] += self.pot
             return False
         self.current_bets = {player : 0. for player in self.remaining_players_hand}
@@ -190,7 +186,6 @@ class Game:
                             self.game_stats[player].showdown_won += 1
                             self.game_stats[player].hands_won += 1
                             self.stacks[player] += self.pot/len(winners)
-                            self.game_stats[player].mean_win += self.pot/len(winners)
                         print('{} wins'.format([player.name for player in winners]))
         for player in self.remaining_players:
             if self.stacks[player] < self.big_blind: 

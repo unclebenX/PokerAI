@@ -5,10 +5,8 @@ import game as g
 MOVING AVERAGE, GRAPHS
 """
 
-class GameStats:
-    stats = None #stats pour un joueur
-    
-    def __init__(self, name):
+class GameStats:    
+    def __init__(self, name, big_blind):
         self.name = name
         self.hands_played = 0
         self.hands_won = 0
@@ -19,11 +17,14 @@ class GameStats:
         self.showdown_won = 0
         self.win_rate = 0
         self.stack_history = []
+        self.big_blind = big_blind
     
     def normalize(self):
         s = sum(self.actions.values())
         for action in self.actions:
             self.actions[action] /= s
+        tab = np.diff(np.array(self.stack_history))
+        self.mean_win = 0 if len(tab[tab>0])==0 else np.mean(tab[tab>0])/self.big_blind
         
     def display(self):
         print('--- Player: {} ---'.format(self.name))

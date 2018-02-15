@@ -38,8 +38,8 @@ class CleverPlayer(Player):
         
     def get_policy(self, X):
         u = np.sum(X[0]+X[1],axis=0)
-        if(max(u) > 1 and len(np.where(X[2]>0.015)) < 3):# or u[-3] > 0):
+        if((max(u) > 1 or np.sum(u) == 2) and len(np.where(X[2]>0.015)[0]) < 6):# or u[-3] > 0):
             return np.array([0.,0.,1.])
         else:
-            return np.array([1.,0.,0.])
+            return np.array([0.999,0.001,0.])
         
