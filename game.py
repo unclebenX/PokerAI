@@ -3,9 +3,7 @@ import numpy as np
 from deck import Deck
 import enum
 import showdown as sd
-"""
-LA SMALL BLIND NE CALL PAS LA BIG BLIND
-"""
+import gamestats as gs
 
 class Action(enum.Enum):
     FOLD = 1
@@ -28,7 +26,7 @@ class Game:
         self.remaining_players      = list(players) #joueurs restant dans l'epoch courante (liste ordonnée par ordre de jeu à la prochaine hand)
         self.remaining_players_hand = list(players) #joueurs restant dans la hand courante
         self.N                      = N
-        self.stacks_history = {player: [1] for player in self.players}
+        self.game_stats = {player: gs.GameStats(player.name) for player in self.players}
         return
 
     def reset_game(self):
@@ -57,16 +55,22 @@ class Game:
         """
         i = 0
         while(i < N and len(self.remaining_players) > 1):
-            s = self.play_hand()
-            for player in self.players:
-                self.stacks_history[player].append(s[player])
+            for player in self.remaining_players: self.game_stats[player].hands_played += 1
+            for player in self.players: self.game_stats[player].stack_history.append(self.stacks[player])
+            self.play_hand()
             self.remaining_players = u.rotate(self.remaining_players)
             self.reset_hand()
             i += 1
             print('---')
             self.display()
             print()
-        return self.stacks_history, self.stacks
+        for player in self.players: 
+            self.stacks[player] -= 1
+            self.game_stats[player].reward = self.stacks[player]
+            self.game_stats[player].win_rate = 0 if self.game_stats[player].hands_played == 0 else self.game_stats[player].reward*100/(self.big_blind*self.game_stats[player].hands_played)
+            self.game_stats[player].mean_win = 0 if self.game_stats[player].hands_won == 0 else self.game_stats[player].mean_win/(self.game_stats[player].hands_won*self.big_blind)
+            self.game_stats[player].normalize()
+        return self.stacks
 
     def to_X(self, player):
         """
@@ -99,6 +103,7 @@ class Game:
         Applique l'action action par le joueur player a l'etat courant du jeu, renvoie s'il faut garder le joueur dans la main ou non.
         """
         self.game_actions[-1].append((player,action))
+        self.game_stats[player].actions[action] += 1 
         if action == Action.BET_CALL:
             print(player.name+' bets/calls')
             if self.max_current_bet == 0:
@@ -142,6 +147,8 @@ class Game:
                 player_index = (player_index + 1) % len(self.remaining_players_hand)
         self.pot += sum(self.current_bets.values())
         if(len(self.remaining_players_hand) < 2):
+            self.game_stats[self.remaining_players_hand[0]].hands_won += 1
+            self.game_stats[self.remaining_players_hand[0]].mean_win += self.pot
             self.stacks[self.remaining_players_hand[0]] += self.pot
             return False
         self.current_bets = {player : 0. for player in self.remaining_players_hand}
@@ -173,12 +180,15 @@ class Game:
                     print("[Post river]")
                     if(self.bet_round()):
                         print("[Showdown]")
+                        for player in self.remaining_players_hand: self.game_stats[player].showdown += 1
                         a = {player : self.cards[player] for player in self.remaining_players_hand}
                         winners = sd.hand_winners(a, self.board)
                         for player in winners:
+                            self.game_stats[player].showdown_won += 1
+                            self.game_stats[player].hands_won += 1
                             self.stacks[player] += self.pot/len(winners)
+                            self.game_stats[player].mean_win += self.pot/len(winners)
                         print('{} wins'.format([player.name for player in winners]))
         for player in self.remaining_players:
             if self.stacks[player] < self.big_blind: 
                 self.remaining_players.remove(player)
-        return self.stacks
