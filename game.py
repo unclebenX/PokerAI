@@ -3,9 +3,6 @@ import numpy as np
 from deck import Deck
 import enum
 import showdown as sd
-"""
-LA SMALL BLIND NE CALL PAS LA BIG BLIND
-"""
 
 class Action(enum.Enum):
     FOLD = 1
