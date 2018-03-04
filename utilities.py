@@ -32,3 +32,9 @@ def enablePrint(old):
     
 def equal_bets(current_bets, remaining_players_hand):
     return all_equal([current_bets[player] for player in remaining_players_hand])
+
+def get_indices(action):
+    return action.value - 1
+
+get_indices = np.vectorize(get_indices)
+
