@@ -26,7 +26,9 @@ class Game:
         self.remaining_players      = list(players) #joueurs restant dans l'epoch courante (liste ordonnée par ordre de jeu à la prochaine hand)
         self.remaining_players_hand = list(players) #joueurs restant dans la hand courante
         self.N                      = N
-        self.game_stats = {player: gs.GameStats(player.name, big_blind) for player in self.players}
+        self.game_stats             = {player: gs.GameStats(player.name, big_blind) for player in self.players}
+        self.training_data          = {player: [] for player in self.players}
+        self.hand_data              = {player: [] for player in self.players}
         return
 
     def reset_game(self):
@@ -42,6 +44,7 @@ class Game:
         self.current_bets = {player: 0. for player in self.remaining_players}
         self.max_current_bet = 0.
         self.remaining_players_hand = list(self.remaining_players) #list() fait une copie
+        self.hand_data              = {player: [] for player in self.players}
         return
     
     def display(self):
@@ -57,7 +60,10 @@ class Game:
         while(i < N and len(self.remaining_players) > 1):
             for player in self.remaining_players: self.game_stats[player].hands_played += 1
             for player in self.players: self.game_stats[player].stack_history.append(self.stacks[player])
-            self.play_hand()
+            returns = self.play_hand()
+            for player in self.players:
+                for (s,a) in self.hand_data[player]:
+                    self.training_data[player].append((s,a,returns[player]))
             self.remaining_players = u.rotate(self.remaining_players)
             self.reset_hand()
             i += 1
@@ -70,7 +76,7 @@ class Game:
             self.game_stats[player].win_rate = 0 if self.game_stats[player].hands_played == 0 else self.game_stats[player].reward*100/(self.big_blind*self.game_stats[player].hands_played)
             #self.game_stats[player].mean_win = 0 if self.game_stats[player].hands_won == 0 else self.game_stats[player].mean_win/(self.game_stats[player].hands_won*self.big_blind)
             self.game_stats[player].normalize()
-        return self.stacks
+        return self.training_data
 
     def to_X(self, player):
         """
@@ -78,7 +84,7 @@ class Game:
         X est un tuple (cartes du joueur, cartes sur la table, stacks, pot)
         """
         stacks = np.array([self.stacks[p] for p in self.players])
-        return (self.cards[player], self.board, stacks, self.pot)
+        return (self.cards[player], self.board, stacks, self.pot+sum(self.current_bets.values()))
 
     def sample_policy(self, player, pi):
         """
@@ -137,8 +143,10 @@ class Game:
             player = self.remaining_players_hand[player_index]
             if player_index == len(self.remaining_players_hand) - 1:
                 all_played = True
-            policy = player.get_policy(self.to_X(player))
+            state = self.to_X(player)
+            policy = player.get_policy(state)
             action = self.sample_policy(player, policy)
+            self.hand_data[player].append((state, action))
             keep_player = self.apply_action(player, action)
             if not keep_player:    
                 self.remaining_players_hand.remove(player)
@@ -159,12 +167,12 @@ class Game:
         """
         Joue une main dans l'ordre défini par self.remaining_players.
         """
+        initial_stacks = dict(self.stacks)
         for player in self.remaining_players:
             self.cards[player][self.deck.get_card()] = 1
             self.cards[player][self.deck.get_card()] = 1
         print("[Blinds]")
         self.pay_blinds()
-        #print(self.remaining_players_hand)
         print("[Pre-flop]")
         if(self.bet_round()):
             self.remaining_players_hand = u.rotate(u.rotate(self.remaining_players_hand))
@@ -190,3 +198,4 @@ class Game:
         for player in self.remaining_players:
             if self.stacks[player] < self.big_blind: 
                 self.remaining_players.remove(player)
+        return {player: self.stacks[player]-initial_stacks[player] for player in self.players}
