@@ -36,5 +36,12 @@ def equal_bets(current_bets, remaining_players_hand):
 def get_indices(action):
     return action.value - 1
 
+def pack_X(X):
+    last_row = X[2].copy()
+    last_row.resize((1,13))
+    last_row[0,12] = X[3]
+    feed_input = np.vstack((X[0],X[1], last_row))
+    return feed_input.ravel()
+
 get_indices = np.vectorize(get_indices)
 
