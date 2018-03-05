@@ -1,4 +1,5 @@
 import numpy as np
+import showdown as sd
 import os
 import sys
 
@@ -40,8 +41,8 @@ def pack_X(X):
     last_row = X[2].copy()
     last_row.resize((1,13))
     last_row[0,12] = X[3]
+    #last_row[0,11] = sd.best_hand(sd.convert_matrix_to_cards(X[0]+X[1]))[0] if np.sum(X[0]+X[1])>=5 else 0.
     feed_input = np.vstack((X[0],X[1], last_row))
     return feed_input.ravel()
 
 get_indices = np.vectorize(get_indices)
-

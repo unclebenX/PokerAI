@@ -10,17 +10,17 @@ import numpy as np
 from player import Player
 import utilities as u
 
-class AIPlayer(Player):
+class BaselineAIPlayer(Player):
     '''
     Policy gradient AI agent.
     '''
 
-    def __init__(self, name, n_players=3, learning_rate = .01):
+    def __init__(self, name, baseline, n_players=3, learning_rate = .1):
         Player.__init__(self, name)
         self.n_players = n_players
+        self.baseline = baseline
         #Initialize TensorFlow
         tf.reset_default_graph()
-        tf.set_random_seed(1234)
         
         #Define placeholders for actions and rewards
         self.picked_actions = tf.placeholder(tf.int32, name='picked_actions')
@@ -31,32 +31,30 @@ class AIPlayer(Player):
         self.input_layer = tf.placeholder(shape=[None,117], dtype=tf.float32)
         
         #Define the neural network for value function approximation
-        reg = 0.1
-        self.layer_1_dim = 100
-        self.layer_1 = tf.layers.dense(self.input_layer, self.layer_1_dim, activation=tf.nn.relu, kernel_regularizer = tf.contrib.layers.l1_regularizer(reg))
-        self.layer_2_dim = 100
-        self.layer_2 = tf.layers.dense(self.layer_1, self.layer_2_dim, activation=tf.nn.relu, kernel_regularizer = tf.contrib.layers.l1_regularizer(reg))
+        self.layer_1_dim = 30
+        self.layer_1 = tf.layers.dense(self.input_layer, self.layer_1_dim, activation=tf.nn.relu)
+        self.layer_2_dim = 30
+        self.layer_2 = tf.layers.dense(self.layer_1, self.layer_2_dim, activation=tf.nn.relu)
         self.output_layer_dim = 3
-        self.output_layer = tf.layers.dense(self.layer_2, self.output_layer_dim, activation=tf.nn.sigmoid, kernel_regularizer = tf.contrib.layers.l1_regularizer(reg))
+        self.output_layer = tf.layers.dense(self.layer_2, self.output_layer_dim, activation=tf.nn.sigmoid)
         
         #Define the loss function
-        self.reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         self.log_probs = tf.log(tf.clip_by_value(tf.gather(self.output_layer, self.picked_actions, axis=1), 1e-10, 1.))
-        self.loss = -tf.reduce_sum(tf.multiply(self.log_probs, self.rewards)) + self.reg_loss
+        self.loss = -tf.reduce_sum(tf.multiply(self.log_probs, self.rewards))
         
         #Define the optimizer
-        self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         self.training_op = self.optimizer.minimize(self.loss)
         self.init = tf.initialize_all_variables()
         self.sess = tf.Session()
         
         init = tf.initialize_all_variables()
         self.sess.run(init)
-        self.exploration_probability = .1
+        self.exploration_probability = .9
         return
     
     def train(self, states, actions, rewards):
-        rewards = (rewards - np.mean(rewards))/np.std(rewards)
+        rewards = np.array(rewards) - np.array(self.baseline.get_baseline(states))
         self.sess.run([self.training_op], feed_dict={self.input_layer: states, self.picked_actions: u.get_indices(actions), self.rewards: rewards})
         return
     
